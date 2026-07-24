@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard de gastos</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; color: #1a1a1a; }
+    .summary { display: flex; gap: 24px; margin-bottom: 24px; }
+    .summary div { border: 1px solid #ddd; border-radius: 8px; padding: 12px 20px; }
+    .summary .value { font-size: 1.6rem; font-weight: 700; }
+    table { border-collapse: collapse; width: 100%; margin-top: 30px; font-size: 0.9rem; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px 8px; text-align: left; }
+    a.back { display: inline-block; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/">&larr; Nuevo análisis</a>
+  <h1>Dashboard de gastos</h1>
+
+  <div class="summary">
+    <div>
+      <div class="value">${{ "{:,.0f}".format(stats.total) }}</div>
+      <div>Total gastado (COP)</div>
+    </div>
+    <div>
+      <div class="value">{{ stats.count }}</div>
+      <div>Transacciones</div>
+    </div>
+  </div>
+
+  {{ category_pie | safe }}
+  {{ merchant_bar | safe }}
+  {{ date_trend | safe }}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Comercio</th>
+        <th>Tipo</th>
+        <th>Categoría</th>
+        <th>Monto</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions | sort(attribute="date", reverse=True) %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td>{{ t.merchant }}</td>
+        <td>{{ t.transaction_type.value }}</td>
+        <td>{{ t.category.value if t.category else "sin categoría" }}</td>
+        <td>${{ "{:,.0f}".format(t.amount) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Expense Insights Agent</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; color: #1a1a1a; }
+    label { display: block; margin-top: 12px; font-weight: 600; }
+    input, select, button { font-size: 1rem; padding: 6px; margin-top: 4px; }
+    button { cursor: pointer; margin-top: 16px; padding: 8px 16px; }
+    #log { margin-top: 20px; font-family: monospace; font-size: 0.9rem; color: #444; white-space: pre-line; }
+    .review-row { border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-top: 10px; }
+    .review-row .reasoning { color: #666; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>Expense Insights Agent</h1>
+  <p>Analiza tus notificaciones bancarias en Gmail y genera un dashboard de gastos.</p>
+
+  <form id="analysis-form">
+    <label for="date_after">Desde</label>
+    <input type="date" id="date_after" name="date_after" required />
+
+    <label for="date_before">Hasta</label>
+    <input type="date" id="date_before" name="date_before" required />
+
+    <button type="submit">Analizar</button>
+  </form>
+
+  <div id="log"></div>
+  <div id="review"></div>
+
+  <script>
+    const CATEGORIES = {{ categories | tojson }};
+    const logEl = document.getElementById("log");
+    const reviewEl = document.getElementById("review");
+
+    function logLine(text) {
+      logEl.textContent += text + "\n";
+    }
+
+    document.getElementById("analysis-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      logEl.textContent = "";
+      reviewEl.innerHTML = "";
+
+      const dateAfter = document.getElementById("date_after").value;
+      const dateBefore = document.getElementById("date_before").value;
+      const url = `/analysis/run?date_after=${dateAfter}&date_before=${dateBefore}`;
+      const source = new EventSource(url);
+
+      source.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "progress") {
+          logLine(`… ${data.node}` + (data.transactions_count != null ? ` (transacciones: ${data.transactions_count})` : ""));
+        } else if (data.type === "review_needed") {
+          logLine("Se necesita tu confirmación en algunas transacciones.");
+          renderReview(data.pending);
+          source.close();
+        } else if (data.type === "done") {
+          logLine("Listo. Abriendo el dashboard…");
+          source.close();
+          window.location = "/analysis/dashboard";
+        }
+      };
+
+      source.onerror = () => {
+        logLine("Se perdió la conexión con el servidor.");
+        source.close();
+      };
+    });
+
+    function renderReview(pending) {
+      const form = document.createElement("form");
+      form.method = "post";
+      form.action = "/analysis/resume";
+
+      for (const item of pending) {
+        const row = document.createElement("div");
+        row.className = "review-row";
+
+        const select = CATEGORIES.map(
+          (cat) => `<option value="${cat}" ${cat === item.suggested_category ? "selected" : ""}>${cat}</option>`
+        ).join("");
+
+        row.innerHTML = `
+          <strong>${item.merchant}</strong> — $${Number(item.amount).toLocaleString("es-CO")}
+          <div class="reasoning">${item.reasoning || ""}</div>
+          <label>Categoría
+            <select name="category__${item.message_id}">${select}</select>
+          </label>
+        `;
+        form.appendChild(row);
+      }
+
+      const submit = document.createElement("button");
+      submit.type = "submit";
+      submit.textContent = "Confirmar y continuar";
+      form.appendChild(submit);
+
+      reviewEl.appendChild(form);
+    }
+  </script>
+</body>
+</html>

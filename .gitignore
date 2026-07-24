@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+secrets/credentials.json
+secrets/token.json
+data/checkpoints.sqlite
+data/reports/*.html
+!data/reports/.gitkeep
