@@ -4,7 +4,9 @@ from expense_agent.providers.gmail_client import _build_query, search_bank_email
 def test_build_query_groups_senders_with_or_and_converts_dates():
     query = _build_query(["a@x.com", "b@y.com"], "2026-01-01", "2026-01-31")
 
-    assert query == "{from:a@x.com from:b@y.com} after:2026/01/01 before:2026/01/31"
+    # Gmail's before: excluye el día indicado, así que se corre un día para que
+    # date_before ("2026-01-31") quede incluido en el rango buscado.
+    assert query == "{from:a@x.com from:b@y.com} after:2026/01/01 before:2026/02/01"
 
 
 def test_search_bank_emails_returns_all_when_none_excluded(

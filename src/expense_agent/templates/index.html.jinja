@@ -11,6 +11,12 @@
     #log { margin-top: 20px; font-family: monospace; font-size: 0.9rem; color: #444; white-space: pre-line; }
     .review-row { border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-top: 10px; }
     .review-row .reasoning { color: #666; font-size: 0.85rem; }
+    #senders-list { list-style: none; padding: 0; margin-top: 8px; }
+    #senders-list li { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-family: monospace; font-size: 0.9rem; }
+    #senders-list button { margin: 0; padding: 2px 8px; font-size: 0.85rem; }
+    #sender-form { display: flex; gap: 8px; margin-top: 8px; }
+    #sender-form input { flex: 1; margin-top: 0; }
+    section { margin-top: 32px; border-top: 1px solid #eee; padding-top: 16px; }
   </style>
 </head>
 <body>
@@ -29,6 +35,16 @@
 
   <div id="log"></div>
   <div id="review"></div>
+
+  <section>
+    <h2>Remitentes bancarios</h2>
+    <p>Correos de los que suelen llegarte notificaciones de movimientos. El agente solo busca entre estos.</p>
+    <ul id="senders-list"></ul>
+    <form id="sender-form">
+      <input type="text" id="sender-input" placeholder="ej: alertasynotificaciones@tubanco.com" required />
+      <button type="submit">Agregar</button>
+    </form>
+  </section>
 
   <script>
     const CATEGORIES = {{ categories | tojson }};
@@ -101,6 +117,50 @@
 
       reviewEl.appendChild(form);
     }
+
+    const sendersListEl = document.getElementById("senders-list");
+    const senderForm = document.getElementById("sender-form");
+    const senderInput = document.getElementById("sender-input");
+
+    function renderSenders(senders) {
+      sendersListEl.innerHTML = "";
+      for (const sender of senders) {
+        const li = document.createElement("li");
+        const span = document.createElement("span");
+        span.textContent = sender;
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.textContent = "Quitar";
+        removeBtn.addEventListener("click", async () => {
+          const updated = await fetch(`/senders/${encodeURIComponent(sender)}`, { method: "DELETE" })
+            .then((res) => res.json());
+          renderSenders(updated);
+        });
+        li.appendChild(span);
+        li.appendChild(removeBtn);
+        sendersListEl.appendChild(li);
+      }
+    }
+
+    async function loadSenders() {
+      const senders = await fetch("/senders").then((res) => res.json());
+      renderSenders(senders);
+    }
+
+    senderForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const sender = senderInput.value.trim();
+      if (!sender) return;
+      const updated = await fetch("/senders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender }),
+      }).then((res) => res.json());
+      renderSenders(updated);
+      senderInput.value = "";
+    });
+
+    loadSenders();
   </script>
 </body>
 </html>

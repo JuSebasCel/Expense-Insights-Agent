@@ -4,6 +4,7 @@ en el `StateGraph` — así los nodos se pueden probar con dobles de prueba sin 
 
 import logging
 from collections import defaultdict
+from collections.abc import Callable
 from email.utils import parsedate_to_datetime
 from typing import Any, Literal
 
@@ -75,12 +76,17 @@ def _email_date_to_iso(raw_date: str, fallback: str) -> str:
         return fallback
 
 
-def make_fetch_emails_node(gmail_service: Any, senders: list[str]):
+def make_fetch_emails_node(gmail_service: Any, senders: list[str] | Callable[[], list[str]]):
+    """`senders` puede ser una lista fija (tests, scripts) o un callable que se resuelve en
+    cada corrida (uso real: lee el archivo administrado desde el front, sin necesidad de
+    reiniciar el proceso cuando el usuario agrega o quita un remitente)."""
+
     def fetch_emails(state: GraphState) -> dict:
+        resolved_senders = senders() if callable(senders) else senders
         already_seen = {t.message_id for t in state.get("transactions", [])}
         emails = search_bank_emails(
             gmail_service,
-            senders,
+            resolved_senders,
             state["date_after"],
             state["date_before"],
             exclude_message_ids=already_seen,

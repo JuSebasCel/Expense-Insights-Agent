@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from expense_agent.api.analysis import router as analysis_router
+from expense_agent.api.senders import router as senders_router
 from expense_agent.core.config import get_settings
 from expense_agent.graph.build import build_checkpointer, build_graph
 
@@ -26,3 +27,4 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Expense Insights Agent", lifespan=lifespan)
 app.include_router(analysis_router)
+app.include_router(senders_router)

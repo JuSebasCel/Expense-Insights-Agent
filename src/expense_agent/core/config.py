@@ -21,6 +21,7 @@ CATEGORIES = [
 # del usuario; los de Nequi son placeholders a confirmar cuando existan.
 BANK_SENDERS = [
     "alertasynotificaciones@bancolombia.com.co",
+    "notificacionesbancolombia.com",
     "nequi.com.co",
 ]
 
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     gmail_token_path: str = "secrets/token.json"
 
     checkpoint_db_path: str = "data/checkpoints.sqlite"
+    senders_db_path: str = "data/senders.json"
 
 
 @lru_cache

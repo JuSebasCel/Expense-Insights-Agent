@@ -10,7 +10,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from expense_agent.core.config import BANK_SENDERS, Settings
+from expense_agent.core.config import Settings
 from expense_agent.graph.nodes import (
     aggregate_stats,
     human_review,
@@ -24,6 +24,7 @@ from expense_agent.models.state import GraphState
 from expense_agent.providers.gmail_client import build_gmail_service
 from expense_agent.providers.llm import get_chat_model
 from expense_agent.services.dashboard_service import render_dashboard
+from expense_agent.services.senders_store import load_senders
 
 
 def make_checkpoint_serde() -> JsonPlusSerializer:
@@ -82,5 +83,11 @@ def assemble_graph(
 def build_graph(settings: Settings, checkpointer: SqliteSaver) -> CompiledStateGraph:
     gmail_service = build_gmail_service(settings)
     llm = get_chat_model(settings)
-    graph = assemble_graph(gmail_service, llm, BANK_SENDERS, render_dashboard)
+
+    def senders_provider() -> list[str]:
+        # Callable en vez de lista fija: así un remitente agregado desde el front se usa en
+        # la siguiente corrida sin reiniciar el servidor.
+        return load_senders(settings.senders_db_path)
+
+    graph = assemble_graph(gmail_service, llm, senders_provider, render_dashboard)
     return graph.compile(checkpointer=checkpointer)

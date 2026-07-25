@@ -1,6 +1,7 @@
 """Cliente de Gmail: OAuth de solo lectura + búsqueda de correos bancarios."""
 
 import os
+from datetime import date, timedelta
 from typing import Any
 
 from google.auth.transport.requests import Request
@@ -46,7 +47,11 @@ def _build_query(senders: list[str], date_after: str, date_before: str) -> str:
     sender_group = "{" + " ".join(f"from:{sender}" for sender in senders) + "}"
     # Gmail espera las fechas como YYYY/MM/DD; el resto del sistema usa ISO (YYYY-MM-DD).
     gmail_after = date_after.replace("-", "/")
-    gmail_before = date_before.replace("-", "/")
+    # El "before:" de Gmail excluye el día indicado (corta a las 00:00 de esa fecha), pero
+    # `date_before` se trata como fecha límite inclusiva en el resto del sistema (así lo
+    # espera el front: "Hasta" = último día a incluir). Sumamos un día para compensar.
+    inclusive_before = date.fromisoformat(date_before) + timedelta(days=1)
+    gmail_before = inclusive_before.strftime("%Y/%m/%d")
     return f"{sender_group} after:{gmail_after} before:{gmail_before}"
 
 
